@@ -277,3 +277,94 @@ blue = negative, color range symmetric so white = 0)
 | Linear (L2) | PyTorch | 0.8454 | 1,855 | 27.5 s (20 epochs) | 7,840 weights |
 | MLP | PyTorch | 0.9769 | 277 | 26.5 s (15 epochs) | 235,146 parameters |
 | CNN | PyTorch | 0.9870 | 156 | about 99 s (10 epochs) | 34,826 parameters |
+
+---
+
+## 2026-10-20, run 7: Experiments (`src/experiments.py`)
+
+Raw numbers per epoch: `results/experiments/{nb,linear,mlp,cnn}.json`.
+Figures: `results/figures/exp_naive_bayes.png`, `results/figures/exp_mlp.png`.
+All on the seed-42 split unless noted; PyTorch runs use `torch.manual_seed(42)`, batch 64, SGD.
+
+### Naive Bayes (`... -m src.experiments nb`)
+
+| alpha | 0.001 | 0.01 | 0.1 | 1 | 10 | 100 |
+|---|---|---|---|---|---|---|
+| acc | 0.8404 | 0.8403 | 0.8403 | 0.8393 | 0.8363 | 0.8235 |
+
+| threshold | 0.1 | 0.3 | 0.5 | 0.7 | 0.9 |
+|---|---|---|---|---|---|
+| acc | 0.8344 | 0.8377 | 0.8393 | 0.8308 | 0.8142 |
+
+Different split seeds (alpha 1, threshold 0.5): 0: 0.8303, 1: 0.8355, 2: 0.8338, 3: 0.8341, 42: 0.8393,
+mean 0.8346, std 0.0029. Seed 42 happened to be the best of the five splits.
+
+Confusion matrix (alpha 1, rows = true, columns = predicted):
+
+```
+[[1078    0   11    5    4   54   34    0   30    2]
+ [   0 1272    7    6    0   23    5    0   32    4]
+ [  17   24  991   50   19    6   39    7   47    2]
+ [   7   19   50  989    3   35   10   10   51   34]
+ [   5    7   11    0  924    6   15    2   26  178]
+ [  24   19   13  123   33  798   26    2   29   25]
+ [   9   23   13    1   12   27 1105    0   11    0]
+ [   6   27   10    4   37    1    0 1073   24   75]
+ [   3   58   16   84   13   43    5    4  887   38]
+ [   9   18    7   14   85    4    1   27   28  955]]
+```
+
+Top mistakes: 4 -> 9 (178), 5 -> 3 (123), 9 -> 4 (85), 8 -> 3 (84), 7 -> 9 (75).
+
+Notes: smoothing barely matters with 4,800 images per digit (it only changes counts by 1 out of
+thousands); large alpha (100) blurs the maps and hurts. Threshold 0.5 is the best of those tried.
+Split-to-split spread (std 0.3 points) is about the same size as the alpha effect, so alpha
+differences below about 0.3 points are noise.
+
+### Linear (`... -m src.experiments linear`, 10 epochs, lr 0.01 unless noted)
+
+| Variant | Final acc | Best acc | Time |
+|---|---|---|---|
+| L2, no bias (baseline) | 0.8527 | 0.8527 | 17.9 s |
+| L2, with bias | 0.8490 | 0.8496 | 20.3 s |
+| Cross-entropy, no bias | 0.9110 | 0.9125 | 19.1 s |
+| Cross-entropy, no bias, lr 0.001 | 0.8846 | 0.8846 | 17.9 s |
+
+Notes: switching L2 to cross-entropy adds about 6 points with the exact same model. L2 pushes every
+score toward exactly 0 or 1, so it wastes effort on images that are already classified correctly;
+cross-entropy only cares that the right score is the largest. Bias makes no real difference.
+
+### MLP (`... -m src.experiments mlp`, 10 epochs)
+
+| Hidden sizes | Params | Final acc | Time |
+|---|---|---|---|
+| (32,) | 25,450 | 0.9533 | 16.1 s |
+| (128,) | 101,770 | 0.9717 | 14.8 s |
+| (256, 128) | 235,146 | 0.9756 | 17.8 s |
+| (512, 256) | 535,818 | 0.9716 | 27.4 s |
+
+| Learning rate (256, 128) | 0.005 | 0.05 | 0.5 |
+|---|---|---|---|
+| Final acc | 0.9235 | 0.9756 | 0.1851 (diverged) |
+
+| Loss (256, 128) | Cross-entropy, lr 0.05 | L2 / MSE, lr 0.01 |
+|---|---|---|
+| Final acc | 0.9756 | 0.8855 |
+
+Notes: bigger is not always better; (512, 256) has 2x the parameters of (256, 128) but is not more
+accurate after 10 epochs. lr 0.005 is too slow, lr 0.5 blows up. L2 costs the MLP about 9 points.
+
+### CNN (`... -m src.experiments cnn`, 5 epochs)
+
+| Variant | Params | Final acc | Time |
+|---|---|---|---|
+| Cross-entropy (32, 64), lr 0.05 | 34,826 | 0.9844 | 49.9 s |
+| L2 / MSE (32, 64), lr 0.01 | 34,826 | 0.9369 | 52.0 s |
+| Cross-entropy, small (8, 16), lr 0.05 | 5,258 | 0.9808 | 24.4 s |
+
+Notes: a CNN with only 5,258 parameters (8 and 16 filters) still beats the 235k-parameter MLP.
+L2 again hurts (about 5 points).
+
+### Cross-cutting finding
+The loss function matters more than the model size: with L2 loss the MLP (0.8855) is barely better
+than the linear model with cross-entropy (0.9110).
