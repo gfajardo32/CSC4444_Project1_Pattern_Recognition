@@ -210,3 +210,70 @@ blue = negative, color range symmetric so white = 0)
   validation accuracy stays flat around 0.977. More epochs would not help much.
 - 4 -> 9 is still the top mistake, same as KNN.
 - TODO: try hidden sizes (128,), (512, 256); lr 0.01 / 0.1; momentum 0.9; MSE loss instead of cross-entropy.
+
+---
+
+## 2026-10-20, run 6: CNN (PyTorch), full validation set
+
+- **What:** Conv(1->32, 3x3) -> ReLU -> MaxPool(2) -> Conv(32->64, 3x3) -> ReLU -> MaxPool(2)
+  -> Flatten -> Linear(1600, 10), 34,826 parameters, no softmax layer (inside `CrossEntropyLoss`)
+- **Feature-map size:** 28 -> 26 (conv) -> 13 (pool) -> 11 (conv) -> 5 (pool; the 11th row is dropped),
+  so the Linear layer gets 64 x 5 x 5 = 1,600 inputs
+- **Loss / optimizer:** cross-entropy, plain SGD, lr 0.05, batch size 64, 10 epochs,
+  `torch.manual_seed(42)`, device mps
+- **Preprocessing:** [-1, 1], kept as (1, 28, 28) (`make_loader(..., flatten=False)`)
+- **Runtime:** about 99 s (10 epochs, including a validation pass after each epoch)
+- **Command:** `.venv/bin/python -m src.cnn`
+
+**Training curve:**
+
+| Epoch | 1 | 2 | 4 | 6 | 8 | 10 |
+|---|---|---|---|---|---|---|
+| Loss | 0.2825 | 0.0870 | 0.0550 | 0.0422 | 0.0338 | 0.0287 |
+| Val acc | 0.9703 | 0.9788 | 0.9831 | 0.9860 | 0.9876 | 0.9870 |
+
+**Final (epoch 10):** accuracy 0.9870, 156 wrong of 12,000. Best epoch was 8 (0.9876).
+
+**Confusion matrix (rows = true, columns = predicted):**
+
+```
+[[1205    0    1    0    0    2    2    2    5    1]
+ [   0 1335    5    0    0    1    0    6    2    0]
+ [   0    1 1192    1    0    0    0    3    3    2]
+ [   2    0    6 1187    0    6    0    5    1    1]
+ [   0    2    3    0 1146    0    1    5    4   13]
+ [   1    0    0    3    1 1074    5    2    4    2]
+ [   3    1    0    0    2    3 1187    0    4    1]
+ [   0    1    3    3    0    1    0 1245    3    1]
+ [   1    0    4    2    0    2    0    1 1141    0]
+ [   0    0    0    3    2    5    0    3    3 1132]]
+```
+
+**Most common mistakes (true -> predicted):** 4 -> 9 (13), then several at 5-6: 1 -> 7, 3 -> 2, 3 -> 5
+
+**Weakest digits:** 4 (1,146 of 1,174 = 97.6%) and 3 (1,187 of 1,209 = 98.2%)
+
+**Figures:** `results/figures/cnn_learning_curve.png`, `results/figures/cnn_filters.png`
+(32 first-layer 3x3 filters, shared symmetric color range so white = 0)
+
+**Notes / questions for the report:**
+- Best model: 156 mistakes vs 277 for the MLP (44% fewer).
+- 7x fewer parameters than the MLP (34,826 vs 235,146) yet more accurate: the same small filters
+  are reused at every position in the image (weight sharing), and pooling tolerates small shifts.
+- 97% after a single epoch.
+- Many first-layer filters look like edge detectors (light on one side, dark on the other).
+- 4 -> 9 is the top mistake for every method except Naive Bayes; it shrinks from 35 (KNN) and
+  25 (MLP) to 13 here.
+- TODO: try padding=1, kernel 5, more channels, more epochs; compare to MSE loss.
+
+---
+
+## Summary: all five methods (validation set of 12,000, seed 42)
+
+| Method | Library | Accuracy | Wrong | Runtime | Model size |
+|---|---|---|---|---|---|
+| KNN (k=1) | NumPy | 0.9721 | 335 | 66 s (prediction) | stores all 48,000 x 784 training pixels |
+| Naive Bayes | NumPy | 0.8393 | 1,928 | about 1.6 s (whole script) | 10 x 784 probabilities + 10 priors |
+| Linear (L2) | PyTorch | 0.8454 | 1,855 | 27.5 s (20 epochs) | 7,840 weights |
+| MLP | PyTorch | 0.9769 | 277 | 26.5 s (15 epochs) | 235,146 parameters |
+| CNN | PyTorch | 0.9870 | 156 | about 99 s (10 epochs) | 34,826 parameters |
