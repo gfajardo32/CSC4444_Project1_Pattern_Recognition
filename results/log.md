@@ -158,3 +158,55 @@ blue = negative, color range symmetric so white = 0)
 - One template per digit can't represent all the ways a digit can be written; the MLP's hidden
   layer can learn several partial features and combine them.
 - TODO: try lr 0.005 / 0.02, bias on, more epochs; try cross-entropy loss instead of L2.
+
+---
+
+## 2026-10-20, run 5: MLP (PyTorch), full validation set
+
+- **What:** 784 -> 256 -> ReLU -> 128 -> ReLU -> 10 (`build_mlp((256, 128))`), 235,146 parameters
+- **Loss:** cross-entropy (`nn.CrossEntropyLoss`, integer labels, no one-hot). The model outputs raw
+  scores with no softmax layer, because `CrossEntropyLoss` applies softmax internally.
+- **Optimizer:** plain SGD, lr 0.05, batch size 64, 15 epochs, `torch.manual_seed(42)`, device mps
+- **Preprocessing:** same loader as the linear classifier ([-1, 1], flattened)
+- **Runtime:** 26.5 s (15 epochs, including a validation pass after each epoch)
+- **Command:** `.venv/bin/python -m src.mlp`
+
+**Training curve:**
+
+| Epoch | 1 | 3 | 5 | 10 | 13 | 15 |
+|---|---|---|---|---|---|---|
+| Loss | 0.5621 | 0.1779 | 0.1161 | 0.0567 | 0.0398 | 0.0326 |
+| Val acc | 0.9070 | 0.9497 | 0.9668 | 0.9756 | 0.9770 | 0.9769 |
+
+**Final (epoch 15):** accuracy 0.9769, 277 wrong of 12,000. Best epochs were 13 and 14 (0.9770).
+
+**Confusion matrix (rows = true, columns = predicted):**
+
+```
+[[1201    0    0    1    0    2    6    2    3    3]
+ [   0 1322    4    3    2    2    2    2    9    3]
+ [   2    1 1163   10    4    0    5    8    7    2]
+ [   2    0    6 1182    0    9    1    3    1    4]
+ [   0    0    3    1 1132    0   11    1    1   25]
+ [   2    0    0   15    2 1054    6    1    7    5]
+ [   4    0    0    0    3    1 1190    0    3    0]
+ [   5    4    2    4    2    1    0 1228    3    8]
+ [   1    3    0   12    1    4    3    0 1125    2]
+ [   3    0    0    3    6    3    0    4    3 1126]]
+```
+
+**Most common mistakes (true -> predicted):** 4 -> 9 (25), 5 -> 3 (15), 8 -> 3 (12), 4 -> 6 (11), 2 -> 3 (10)
+
+**Weakest digits:** 4 (1,132 of 1,174 = 96.4%) and 5 (1,054 of 1,092 = 96.5%)
+
+**Figure:** `results/figures/mlp_learning_curve.png` (training loss and validation accuracy per epoch)
+
+**Notes / questions for the report:**
+- Best so far: beats KNN (0.9721) by about 0.5 points, and needs only 235k weights at prediction time
+  instead of storing all 48,000 training images.
+- The linear classifier's over-prediction of 1 is gone (8 -> 1 drops from 146 to 3). The hidden
+  layer can combine partial stroke features instead of one template per digit.
+- Overfitting begins: training loss keeps falling (0.0567 at epoch 10 -> 0.0326 at epoch 15) but
+  validation accuracy stays flat around 0.977. More epochs would not help much.
+- 4 -> 9 is still the top mistake, same as KNN.
+- TODO: try hidden sizes (128,), (512, 256); lr 0.01 / 0.1; momentum 0.9; MSE loss instead of cross-entropy.
