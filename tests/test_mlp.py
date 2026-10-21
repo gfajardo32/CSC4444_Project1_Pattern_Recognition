@@ -70,6 +70,7 @@ def test_train_one_epoch_lowers_loss():
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
     
     first_loss = train_one_epoch(model, loader, loss_fn, optimizer, DEVICE)
+    last_loss = first_loss
     for _ in range(5):
         last_loss = train_one_epoch(model, loader, loss_fn, optimizer, DEVICE)
         

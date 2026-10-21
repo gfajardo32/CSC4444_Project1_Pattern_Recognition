@@ -9,3 +9,9 @@ MNIST.zip
 # generated
 results/*.pt
 results/*.npz
+
+# Python / tool caches
+.pytest_cache/
+
+# Word lock files
+~$*

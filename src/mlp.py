@@ -85,6 +85,7 @@ if __name__ == "__main__":
     print(f"Training MLP {784} -> {' -> '.join(map(str, hidden_sizes))} -> 10...")
     start_time = time.time()
 
+    val_preds, val_acc = np.array([], dtype=np.int64), 0.0  # filled in by the epoch loop
     for epoch in range(1, epochs + 1):
         avg_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
         val_preds = evaluate(model, val_loader, device)

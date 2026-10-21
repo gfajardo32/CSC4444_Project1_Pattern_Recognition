@@ -80,6 +80,7 @@ if __name__ == "__main__":
     print(f"Training CNN (channels={channels}, kernel={kernel})...")
     start_time = time.time()
 
+    val_preds, val_acc = np.array([], dtype=np.int64), 0.0  # filled in by the epoch loop
     for epoch in range(1, epochs + 1):
         avg_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
         val_preds = evaluate(model, val_loader, device)
@@ -126,7 +127,9 @@ if __name__ == "__main__":
 
     # 2. Figure: First-layer filters -> results/figures/cnn_filters.png
     print("Saving first-layer filters...")
-    filters = model[0].weight.detach().cpu().numpy()  # Shape: (c1, 1, kernel, kernel)
+    first_conv = model[0]
+    assert isinstance(first_conv, nn.Conv2d)
+    filters = first_conv.weight.detach().cpu().numpy()  # Shape: (c1, 1, kernel, kernel)
     num_filters = filters.shape[0]
     limit = np.abs(filters).max()  # one symmetric color range for all filters, so white = 0
     cols = 8

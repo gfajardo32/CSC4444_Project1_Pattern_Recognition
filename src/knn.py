@@ -74,11 +74,8 @@ def predict(X_val, X_train, y_train, ks=(1, 3, 5), batch_size=500):
             collected_preds[k].append(preds)
 
     # 3. Glue each k's list of batch arrays together AFTER the loop
-    for k in ks:
-        collected_preds[k] = np.concatenate(collected_preds[k])
-        
     # 4. Return ONCE at the very end
-    return collected_preds
+    return {k: np.concatenate(collected_preds[k]) for k in ks}
 
 
 def accuracy(preds, y_true):

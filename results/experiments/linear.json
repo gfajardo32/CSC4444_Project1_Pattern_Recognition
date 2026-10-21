@@ -26,7 +26,7 @@
     ],
     "final": 0.8526666666666667,
     "best": 0.8526666666666667,
-    "seconds": 17.9
+    "seconds": 13.4
   },
   "L2, with bias": {
     "val_acc": [
@@ -55,7 +55,7 @@
     ],
     "final": 0.849,
     "best": 0.8495833333333334,
-    "seconds": 20.3
+    "seconds": 13.1
   },
   "Cross-entropy, no bias": {
     "val_acc": [
@@ -84,7 +84,7 @@
     ],
     "final": 0.911,
     "best": 0.9125,
-    "seconds": 19.1
+    "seconds": 12.6
   },
   "Cross-entropy, no bias, lr 0.001": {
     "val_acc": [
@@ -113,6 +113,6 @@
     ],
     "final": 0.8845833333333334,
     "best": 0.8845833333333334,
-    "seconds": 17.9
+    "seconds": 13.8
   }
 }

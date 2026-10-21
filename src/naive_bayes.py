@@ -13,7 +13,7 @@ def binarize(X):
     """
     return (X > 0.5).astype(int)
 
-def fit(X_bin, y, alpha=1):
+def fit(X_bin, y, alpha=1.0):
     """Train the Naive Bayes classifier using Laplace smoothing.
     
     X_bin: (N, 784) binarized training images (0s and 1s)
